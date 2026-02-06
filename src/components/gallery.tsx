@@ -9,19 +9,15 @@ interface GalleryProps {
 }
 
 export const Gallery = ({ photos }: GalleryProps) => {
-    // State: [Mevcut Index, Yön (-1 veya 1)]
     const [[page, direction], setPage] = useState([0, 0]);
     const [isOpen, setIsOpen] = useState(false);
 
-    // Seçili fotoyu güvenli bir şekilde al
     const selectedPhoto = isOpen ? photos[page] : null;
 
-    // Fotoğraf Değiştirme Mantığı (Callback ile sarmaladık ki useEffect içinde kullanabilelim)
     const changePhoto = useCallback((newDirection: number) => {
         setPage(([currentPage]) => {
             let newIndex = currentPage + newDirection;
 
-            // Döngüsel Navigasyon (Infinite Loop)
             if (newIndex < 0) newIndex = photos.length - 1;
             if (newIndex >= photos.length) newIndex = 0;
 
@@ -39,7 +35,6 @@ export const Gallery = ({ photos }: GalleryProps) => {
         setIsOpen(false);
     }, []);
 
-    // 1. KLAVYE NAVİGASYONU (Keyboard Listeners)
     useEffect(() => {
         if (!isOpen) return;
 
@@ -57,15 +52,13 @@ export const Gallery = ({ photos }: GalleryProps) => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, changePhoto, closeModal]);
 
-    // 2. SCROLL LOCKING (Arka planı kilitleme)
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = "hidden"; // Scroll'u kapat
+            document.body.style.overflow = "hidden";
         } else {
-            document.body.style.overflow = "auto"; // Scroll'u aç
+            document.body.style.overflow = "auto";
         }
 
-        // Cleanup: Component unmount olursa veya modal kapanırsa scroll'u geri aç
         return () => {
             document.body.style.overflow = "auto";
         };
@@ -73,7 +66,6 @@ export const Gallery = ({ photos }: GalleryProps) => {
 
     return (
         <>
-            {/* Masonry Layout: CSS Columns ile basit ve etkili çözüm */}
             <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4 p-4">
                 {photos.map((photo) => (
                     <PhotoCard
@@ -83,8 +75,6 @@ export const Gallery = ({ photos }: GalleryProps) => {
                     />
                 ))}
             </div>
-
-            {/* Modal */}
             {isOpen && selectedPhoto && (
                 <Modal
                     selectedPhoto={selectedPhoto}
