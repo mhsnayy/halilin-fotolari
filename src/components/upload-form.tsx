@@ -1,26 +1,66 @@
 'use client'
 
 import { upload } from '@vercel/blob/client';
-import { savePhotoReferences } from '@/acitons';
+// DÜZELTME: Yazım hatası giderildi (acitons -> src/actions)
+import { saveEngagementReferences } from '@/acitons';
 import { useState, useRef } from 'react';
 
 interface UploadFormProps {
     onSuccess?: () => void;
 }
 
+async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+
+            img.onload = () => {
+                const MAX_WIDTH = 1920;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height = Math.round((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Canvas hatası'));
+                    return;
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Sıkıştırma hatası'));
+                }, 'image/jpeg', 0.8);
+            };
+        };
+        reader.onerror = (error) => reject(error);
+    });
+}
+
 export function UploadForm({ onSuccess }: UploadFormProps) {
     const inputFileRef = useRef<HTMLInputElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [progress, setProgress] = useState<string>(''); // Yükleme durumu için
+    const [progress, setProgress] = useState<string>('');
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
         event.preventDefault();
         setIsLoading(true);
         setError(null);
-        setProgress('Hazırlanıyor...');
+        setProgress('Görseller optimize ediliyor...');
 
-        // FileList'i Array'e çeviriyoruz
         const files = Array.from(inputFileRef.current?.files || []);
 
         if (files.length === 0) {
@@ -29,47 +69,43 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
             return;
         }
 
-        // Helper: Tek bir dosyanın boyutlarını okuma
-        const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve({ width: img.width, height: img.height });
-                img.onerror = reject;
-                img.src = URL.createObjectURL(file);
-            });
-        };
-
         try {
+            const uploadPromises = files.map(async (originalFile) => {
 
-            const uploadPromises = files.map(async (file) => {
-                const dims = await getImageDimensions(file);
-                const newBlob = await upload(file.name, file, {
-                    access: 'public',
-                    handleUploadUrl: '/api/upload',
+                const compressedBlob = await compressImage(originalFile);
+
+                const newFileName = originalFile.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                const compressedFile = new File([compressedBlob], newFileName, {
+                    type: 'image/jpeg'
                 });
+                const imgBitmap = await createImageBitmap(compressedFile);
+                const uniquePrefix = Math.random().toString(36).substring(2, 10);
+                const uniqueFileName = `${uniquePrefix}-${newFileName}`;
+                const newBlob = await upload(uniqueFileName, compressedFile, {
+                    access: 'public',
+                    handleUploadUrl: '/api/upload-engagement',
+                });
+
                 return {
                     url: newBlob.url,
-                    alt: file.name.split('.')[0],
-                    width: dims.width,
-                    height: dims.height
+                    alt: originalFile.name.split('.')[0],
+                    width: imgBitmap.width,
+                    height: imgBitmap.height
                 };
             });
 
             setProgress(`${files.length} dosya yükleniyor...`);
 
-            // Tüm dosyaların Blob'a yüklenmesini bekle (Parallel Execution)
             const uploadedPhotosData = await Promise.all(uploadPromises);
 
             setProgress('Veritabanına kaydediliyor...');
 
-            // 4. Batch Insert: Hepsini tek seferde server action'a gönder
-            const result = await savePhotoReferences(uploadedPhotosData);
+            const result = await saveEngagementReferences(uploadedPhotosData);
 
             if (result.status === 'error') {
                 throw new Error(result.message);
             }
 
-            // Başarılı
             if (inputFileRef.current) inputFileRef.current.value = '';
             if (onSuccess) onSuccess();
 
@@ -92,14 +128,13 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
                         name="file"
                         type="file"
                         accept="image/*"
-                        multiple // KRİTİK: Çoklu seçimi aktif eder
+                        multiple
                         required
                         className="block w-full text-sm text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-neutral-800 file:text-white hover:file:bg-neutral-700 cursor-pointer"
                     />
                 </div>
-                {/* Kaç dosya seçildiğini gösteren ufak bir bilgi (Opsiyonel ama iyi UX) */}
                 <p className="text-xs text-neutral-500 mt-2">
-                    Birden fazla fotoğraf seçebilirsiniz (CTRL veya CMD tuşu ile).
+                    Görseller otomatik olarak sıkıştırılacaktır. (Max 1920px)
                 </p>
             </div>
 

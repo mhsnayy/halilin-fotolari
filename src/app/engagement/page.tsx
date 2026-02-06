@@ -12,7 +12,9 @@ interface GalleryPhoto {
 }
 
 export default async function Home() {
-    const { rows } = await sql`SELECT * FROM photos ORDER BY id DESC`;
+    const { rows } = await sql`
+    SELECT * FROM engagement
+    ORDER BY id DESC`;
 
     // GÜNCELLEME BURADA:
     const mappedPhotos: GalleryPhoto[] = rows.map((row) => ({
