@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-neutral-950">
       <div className="max-w-7xl mx-auto">
-        <Hero />
+        <Hero h1="Halil & Zeynep" p="Gururla Sunar" />
         <Gallery photos={photos} />
       </div>
     </main>

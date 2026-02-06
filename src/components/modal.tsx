@@ -1,24 +1,23 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react"; // useCallback ekledik
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Photo } from "@/types/photo-types";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ModalProps {
-    selectedPhoto: Photo; // null olamaz çünkü parent kontrol ediyor
+    selectedPhoto: Photo;
     direction: number;
     onClose: () => void;
     onNext: () => void;
     onPrev: () => void;
 }
 
-// Variants: Yön bilgisine göre giriş/çıkış koordinatlarını belirler
 const variants = {
     enter: (direction: number) => ({
-        x: direction > 0 ? 1000 : -1000, // Sağdaysa +1000, Soldaysa -1000'den gel
+        x: direction > 0 ? 1000 : -1000,
         opacity: 0,
-        scale: 0.9, // Hafif zoom efekti
+        scale: 0.9,
     }),
     center: {
         zIndex: 1,
@@ -28,38 +27,77 @@ const variants = {
     },
     exit: (direction: number) => ({
         zIndex: 0,
-        // KİLİT NOKTA: Çıkarken girişin TERSİNE gitmeli.
-        // Eğer sağa (1) gidiyorsak, eski resim sola (-1000) gitmeli.
         x: direction < 0 ? 1000 : -1000,
         opacity: 0,
-        scale: 0.9, // Çıkarken hafif küçül
+        scale: 0.9,
     }),
 };
 
 export const Modal = ({ selectedPhoto, direction, onClose, onNext, onPrev }: ModalProps) => {
 
+    // MANUEL KAPATMA FONKSİYONU
+    // Direkt onClose() çağırmıyoruz, tarayıcıyı bir geri alıyoruz.
+    // Bu işlem otomatik olarak aşağıdaki 'popstate' listener'ını tetikler.
+    const handleManualClose = useCallback(() => {
+        // Eğer history state'imizde 'modal' varsa geri git
+        if (window.history.state?.modalOpen) {
+            window.history.back();
+        } else {
+            // Güvenlik önlemi: Eğer direkt link ile gelindiyse ve history yoksa normal kapat
+            onClose();
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        // 1. Modal açıldığında history'ye "Burası Modal Açık Hali" diye not düşüyoruz.
+        // Bu sayede kullanıcı geri tuşuna bastığında sayfadan çıkmaz, bu kaydı siler.
+        window.history.pushState({ modalOpen: true }, "", window.location.href);
+
+        // 2. Geri tuşunu dinleyen fonksiyon
+        const handlePopState = () => {
+            // Tarayıcı geri gelince bu çalışır -> Modalı kapat
+            onClose();
+        };
+
+        // Event listener ekle
+        window.addEventListener("popstate", handlePopState);
+
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+            // Component unmount olurken (Modal kapanırken) ekstra bir temizliğe gerek yok,
+            // çünkü ya geri tuşuyla (popstate) kapandı ya da biz manualClose ile back() yaptık.
+        };
+    }, [onClose]); // Dependency array önemli
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowRight") onNext();
             if (e.key === "ArrowLeft") onPrev();
-            if (e.key === "Escape") onClose();
+            // ESC tuşuna basınca da manuel kapatmayı tetikliyoruz
+            if (e.key === "Escape") handleManualClose();
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [onNext, onPrev, onClose]);
+    }, [onNext, onPrev, handleManualClose]);
 
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            // Overlay'e tıklayınca da manuel kapatma çalışsın
+            onClick={handleManualClose}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
         >
-            <button className="absolute top-5 right-5 text-white/70 hover:text-white bg-black/20 hover:bg-white/10 p-2 rounded-full transition z-50">
+            {/* X Butonuna handleManualClose bağlıyoruz */}
+            <button
+                onClick={(e) => { e.stopPropagation(); handleManualClose(); }}
+                className="absolute top-5 right-5 text-white/70 hover:text-white bg-black/20 hover:bg-white/10 p-2 rounded-full transition z-50"
+            >
                 <X size={24} />
             </button>
 
+            {/* Diğer butonlar aynı kalıyor */}
             <button
                 onClick={(e) => { e.stopPropagation(); onPrev(); }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white bg-black/20 hover:bg-white/10 p-3 rounded-full transition z-50 hidden md:block"
@@ -78,13 +116,10 @@ export const Modal = ({ selectedPhoto, direction, onClose, onNext, onPrev }: Mod
                 className="relative w-full h-full max-w-5xl max-h-[85vh] flex items-center justify-center overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* initial={false}: İlk açılışta slide animasyonu yapma.
-                  custom={direction}: Bu çok önemli! exit variant'ına yönü bu taşır.
-                */}
                 <AnimatePresence initial={false} custom={direction} mode="popLayout">
                     <motion.div
                         key={selectedPhoto.id}
-                        custom={direction} // Variantlara argüman olarak gider
+                        custom={direction}
                         variants={variants}
                         initial="enter"
                         animate="center"
@@ -93,17 +128,14 @@ export const Modal = ({ selectedPhoto, direction, onClose, onNext, onPrev }: Mod
                             x: { type: "spring", stiffness: 300, damping: 30 },
                             opacity: { duration: 0.2 }
                         }}
-
-                        // Swipe (Kaydırma) İşlemleri
                         drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={1}
-                        onDragEnd={(e, { offset, velocity }) => {
+                        onDragEnd={(e, { offset }) => {
                             const swipe = offset.x;
                             if (swipe < -50) onNext();
                             else if (swipe > 50) onPrev();
                         }}
-
                         className="absolute w-full h-full flex items-center justify-center"
                     >
                         <Image

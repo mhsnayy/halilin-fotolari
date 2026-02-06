@@ -4,5 +4,7 @@ export interface Photo {
     id: number;
     src: StaticImageData | string; // Hem import hem url desteklesin
     alt: string;
+    width: number;
+    height: number;
     category?: string;
 }

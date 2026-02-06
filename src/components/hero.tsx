@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 
-export const Hero = () => {
+export const Hero = ({ h1, p }: { h1: string; p: string }) => {
     return (
         <section className="h-[40vh] flex flex-col items-center justify-center text-center px-4">
             <motion.h1
@@ -10,7 +10,7 @@ export const Hero = () => {
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 className="text-5xl md:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-500 mb-4"
             >
-                Özel Anlar
+                {h1}
             </motion.h1>
             <motion.p
                 initial={{ opacity: 0 }}
@@ -18,7 +18,7 @@ export const Hero = () => {
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="text-gray-400 text-lg font-light tracking-wide"
             >
-                Gözünden yansıyan hatıralar koleksiyonu.
+                {p}
             </motion.p>
         </section>
     );
