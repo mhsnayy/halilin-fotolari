@@ -134,7 +134,6 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
                     />
                 </div>
                 <p className="text-xs text-neutral-500 mt-2">
-                    Görseller otomatik olarak sıkıştırılacaktır. (Max 1920px)
                 </p>
             </div>
 

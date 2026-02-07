@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { UploadForm } from './upload-form';
 
 export function UploadModal() {
-  // UI State: Modal açık mı kapalı mı?
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      {/* --- Trigger Button (Sağ üstteki buton) --- */}
       <button
         onClick={() => setIsOpen(true)}
         className="bg-white text-black font-semibold py-2 px-4 rounded-full hover:bg-neutral-200 transition-all flex items-center gap-2 text-sm shadow-lg shadow-white/10"
@@ -18,14 +16,11 @@ export function UploadModal() {
         <span>Fotoğraf Yükle</span>
       </button>
 
-      {/* --- Modal Overlay (Eğer açıksa render et) --- */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
 
-          {/* Modal Content */}
           <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl max-w-md w-full relative shadow-2xl animate-in zoom-in-95 duration-200">
 
-            {/* Kapat Butonu (X) */}
             <button
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 text-neutral-400 hover:text-white"

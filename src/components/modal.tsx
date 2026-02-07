@@ -35,45 +35,32 @@ const variants = {
 
 export const Modal = ({ selectedPhoto, direction, onClose, onNext, onPrev }: ModalProps) => {
 
-    // MANUEL KAPATMA FONKSİYONU
-    // Direkt onClose() çağırmıyoruz, tarayıcıyı bir geri alıyoruz.
-    // Bu işlem otomatik olarak aşağıdaki 'popstate' listener'ını tetikler.
     const handleManualClose = useCallback(() => {
-        // Eğer history state'imizde 'modal' varsa geri git
         if (window.history.state?.modalOpen) {
             window.history.back();
         } else {
-            // Güvenlik önlemi: Eğer direkt link ile gelindiyse ve history yoksa normal kapat
             onClose();
         }
     }, [onClose]);
 
     useEffect(() => {
-        // 1. Modal açıldığında history'ye "Burası Modal Açık Hali" diye not düşüyoruz.
-        // Bu sayede kullanıcı geri tuşuna bastığında sayfadan çıkmaz, bu kaydı siler.
         window.history.pushState({ modalOpen: true }, "", window.location.href);
 
-        // 2. Geri tuşunu dinleyen fonksiyon
         const handlePopState = () => {
-            // Tarayıcı geri gelince bu çalışır -> Modalı kapat
             onClose();
         };
 
-        // Event listener ekle
         window.addEventListener("popstate", handlePopState);
 
         return () => {
             window.removeEventListener("popstate", handlePopState);
-            // Component unmount olurken (Modal kapanırken) ekstra bir temizliğe gerek yok,
-            // çünkü ya geri tuşuyla (popstate) kapandı ya da biz manualClose ile back() yaptık.
         };
-    }, [onClose]); // Dependency array önemli
+    }, [onClose]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowRight") onNext();
             if (e.key === "ArrowLeft") onPrev();
-            // ESC tuşuna basınca da manuel kapatmayı tetikliyoruz
             if (e.key === "Escape") handleManualClose();
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -85,11 +72,9 @@ export const Modal = ({ selectedPhoto, direction, onClose, onNext, onPrev }: Mod
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            // Overlay'e tıklayınca da manuel kapatma çalışsın
             onClick={handleManualClose}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
         >
-            {/* X Butonuna handleManualClose bağlıyoruz */}
             <button
                 onClick={(e) => { e.stopPropagation(); handleManualClose(); }}
                 className="absolute top-5 right-5 text-white/70 hover:text-white bg-black/20 hover:bg-white/10 p-2 rounded-full transition z-50"
@@ -97,7 +82,6 @@ export const Modal = ({ selectedPhoto, direction, onClose, onNext, onPrev }: Mod
                 <X size={24} />
             </button>
 
-            {/* Diğer butonlar aynı kalıyor */}
             <button
                 onClick={(e) => { e.stopPropagation(); onPrev(); }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white bg-black/20 hover:bg-white/10 p-3 rounded-full transition z-50 hidden md:block"

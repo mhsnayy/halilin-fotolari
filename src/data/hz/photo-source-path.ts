@@ -1,6 +1,5 @@
 import { StaticImageData } from "next/image";
 
-// Importlar (Aynı kalıyor)
 import hz1 from "@/photos/hz/hz-1.jpeg";
 import hz2 from "@/photos/hz/hz-2.jpeg";
 import hz3 from "@/photos/hz/hz-3.jpeg";
